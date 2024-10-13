@@ -1,0 +1,165 @@
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - basicSSHUserPrivateKey:
+              description: "GitHub_Autenticacion_SSH"
+              id: "GitHub_Autenticacion_SSH"
+              privateKeySource:
+                directEntry:
+                  privateKey: "${github.credential.ssh}"
+              scope: GLOBAL
+              username: "HansJP96"
+              usernameSecret: true
+          - string:
+              description: "Sonar_Token_Secret"
+              id: "Sonar_Token_Secret"
+              scope: GLOBAL
+              secret: "${sonar.credential.token}"
+          - string:
+              description: "Github_Token_Secret"
+              id: "Github_Token_Secret"
+              scope: GLOBAL
+              secret: "${github.credential.token}"
+jenkins:
+  systemMessage: "Jenkins configured automatically by Jenkins Configuration as Code plugin\n"
+  agentProtocols:
+    - "JNLP4-connect"
+    - "Ping"
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${jenkins.admin.user}"
+          name: "${jenkins.admin.user}"
+          password: "${jenkins.admin.password}"
+        - id: "read"
+          password: "read"
+  authorizationStrategy:
+    roleBased:
+      roles:
+        global:
+          - name: "admin"
+            description: "Jenkins administrators"
+            permissions:
+              - "Overall/Administer"
+            entries:
+              - user: "admin"
+          - name: "readonly"
+            description: "Read-only users"
+            permissions:
+              - "Overall/Read"
+              - "Job/Read"
+            entries:
+              - group: "authenticated"
+  numExecutors: 2
+  nodeMonitors:
+    - "architecture"
+    - "clock"
+    - diskSpace:
+        freeSpaceThreshold: "2GiB"
+        freeSpaceWarningThreshold: "3GiB"
+    - "swapSpace"
+    - tmpSpace:
+        freeSpaceThreshold: "2GiB"
+        freeSpaceWarningThreshold: "3GiB"
+    - "responseTime"
+  clouds:
+    - kubernetes:
+        name: "Kubernetes_Connect"
+        containerCap: 10
+        containerCapStr: "10"
+        namespace: "jenkins"
+        serverUrl: "https://kubernetes.default"
+        jenkinsUrl: "http://jenkins-master-service.jenkins.svc.cluster.local:8080"
+        jenkinsTunnel: "jenkins-master-service.jenkins.svc.cluster.local:50000"
+        readTimeout: 20
+        templates:
+          - name: "base-pod"
+            label: "base-pod-template"
+            yamlMergeStrategy: merge
+            yaml: |
+              apiVersion: v1
+              kind: Pod
+               metadata:
+                labels:
+                  app: jenkins-slave
+              spec:
+                topologySpreadConstraints:
+                - maxSkew: 1
+                  topologyKey: jenkins
+                  whenUnsatisfiable: DoNotSchedule
+                  labelSelector:
+                    matchLabels:
+                      app: jenkins-slave
+                affinity:
+                  nodeAffinity:
+                    requiredDuringSchedulingIgnoredDuringExecution:
+                      nodeSelectorTerms:
+                      - matchExpressions:
+                        - key: jenkins
+                          operator: In
+                          values:
+                          - slave
+  log:
+    recorders:
+    - loggers:
+      - level: "ALL"
+        name: "hudson.plugins.git.GitStatus"
+      - level: "ALL"
+        name: "com.cloudbees.jenkins.GitHubWebHook"
+      - level: "ALL"
+        name: "org.jenkinsci.plugins.github"
+      name: "Triggers"
+security:
+  globalJobDslSecurityConfiguration:
+    useScriptSecurity: false
+  queueItemAuthenticator:
+    authenticators:
+      - global:
+          strategy: "triggeringUsersAuthorizationStrategy"
+  scriptApproval:
+    approvedSignatures:
+      - "method java.io.File getName"
+      - "method java.io.File isDirectory"
+      - "method java.io.File listFiles"
+      - "new java.io.File java.lang.String"
+      - "method groovy.lang.GroovyObject invokeMethod java.lang.String java.lang.Object"
+unclassified:
+  location:
+    url: "http://jenkins-master-service.jenkins.svc.cluster.local:8080"
+  gitHubConfiguration:
+    apiRateLimitChecker: ThrottleForNormalize
+  gitHubPluginConfig:
+    configs:
+      - credentialsId: "Github_Token_Secret"
+        manageHooks: true
+        name: "Github cuenta hanji96"
+    hookUrl: "http://127.0.0.1:8080/github-webhook/"
+  sonarGlobalConfiguration:
+    buildWrapperEnabled: false
+    installations:
+      - credentialsId: "Sonar_Token_Secret"
+        name: "Prueba sonar jenkins as code"
+        serverUrl: "http://sonarqube:9000"
+        triggers:
+          skipScmCause: false
+          skipUpstreamCause: false
+tool:
+  git:
+    installations:
+      - home: "git"
+        name: "Default"
+  mavenGlobalConfig:
+    globalSettingsProvider: "standard"
+    settingsProvider: "standard"
+  sonarRunnerInstallation:
+    installations:
+      - name: "Prueba sonar jenkins as code"
+        properties:
+          - installSource:
+              installers:
+                - sonarRunnerInstaller:
+                    id: "6.1.0.4477"
+jobs:
+  - file: /home/seed/seedjob.groovy

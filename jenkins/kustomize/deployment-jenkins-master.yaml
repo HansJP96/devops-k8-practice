@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins-master
+  namespace: jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins-master
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: jenkins-master
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: jenkins
+                    operator: In
+                    values:
+                      - master
+      # topologySpreadConstraints:
+      #   - maxSkew: 1
+      #     topologyKey: kubernetes.io/hostname
+      #     whenUnsatisfiable: DoNotSchedule
+      #     labelSelector:
+      #       matchLabels:
+      #         app: jenskins-master
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+      serviceAccountName: jenkins-admin
+      containers:
+        - name: jenkins-master
+          image: jenkins/jenkins:lts-jdk17
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              jenkins-plugin-cli -f /usr/share/jenkins/ref/plugins.txt
+              exec sh /home/jenkins_init/seedJob_execute.sh
+          envFrom:
+            - configMapRef:
+                name: jenkins-env
+          resources:
+            limits:
+              memory: "1024Mi"
+              cpu: "800m"
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: jcasc-secret-volume
+              mountPath: /run/secrets/secrets.properties
+              subPath: secrets.properties
+            - name: jcasc-file-volume
+              mountPath: /home/jenkins_as_code
+            - name: jcasc-plugins-volume
+              mountPath: /usr/share/jenkins/ref/plugins.txt
+              subPath: plugins.txt
+            - name: jcasc-jenkins-init-volume
+              mountPath: /home/jenkins_init
+              readOnly: false
+            - name: jcasc-seedjob-volume
+              mountPath: /home/seed
+          ports:
+            - containerPort: 8080
+            - containerPort: 50000
+          startupProbe:
+            httpGet:
+              path: "/login"
+              port: 8080
+            initialDelaySeconds: 60
+            failureThreshold: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: "/login"
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: "/login"
+              port: 8080
+            periodSeconds: 20
+            failureThreshold: 3
+      volumes:
+        - name: jcasc-secret-volume
+          secret:
+            secretName: jcasc-secret
+            defaultMode: 0600
+
+        - name: jcasc-file-volume
+          configMap:
+            name: jcasc-file-config
+
+        - name: jcasc-plugins-volume
+          configMap:
+            name: jcasc-plugin-config
+
+        - name: jcasc-jenkins-init-volume
+          configMap:
+            name: jcasc-jenkins-init-config
+            defaultMode: 0700
+
+        - name: jcasc-seedjob-volume
+          configMap:
+            name: jcasc-seedjob-config

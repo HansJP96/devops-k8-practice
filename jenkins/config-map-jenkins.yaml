@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-env
+  namespace: jenkins
+data:
+  JAVA_OPTS: -Djenkins.install.runSetupWizard=false
+  CASC_JENKINS_CONFIG: /home/jenkins_as_code/casc.yaml
+  SECRETS_PATH: /run/secrets/secrets.properties
+  INIT_JENKINS: /home/jenkins_init/seedJob_execute.sh

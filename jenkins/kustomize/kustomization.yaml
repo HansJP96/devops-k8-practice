@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment-jenkins-master.yaml
+
+secretGenerator:
+  - name: jcasc-secret
+    namespace: jenkins
+    files:
+      - files/secrets.properties
+
+configMapGenerator:
+  - name: jcasc-file-config
+    namespace: jenkins
+    files:
+      - files/casc.yaml
+
+  - name: jcasc-plugin-config
+    namespace: jenkins
+    files:
+      - files/plugins.txt
+
+  - name: jcasc-jenkins-init-config
+    namespace: jenkins
+    files:
+      - files/seedJob_execute.sh
+
+  - name: jcasc-seedjob-config
+    namespace: jenkins
+    files:
+      - files/groovy_files/basePipeline.groovy
+      - files/groovy_files/seedjob.groovy
