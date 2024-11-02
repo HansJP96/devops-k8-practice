@@ -2,13 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - deployment-jenkins-master.yaml
-
-secretGenerator:
-  - name: jcasc-secret
-    namespace: jenkins
-    files:
-      - files/secrets.properties
+  - deployment-jenkins-controller.yaml
 
 configMapGenerator:
   - name: jcasc-file-config

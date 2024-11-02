@@ -1,13 +1,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jenkins-master
+  name: jenkins-controller
   namespace: jenkins
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jenkins-master
+      app: jenkins-controller
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -16,7 +16,7 @@ spec:
   template:
     metadata:
       labels:
-        app: jenkins-master
+        app: jenkins-controller
     spec:
       affinity:
         nodeAffinity:
@@ -26,20 +26,20 @@ spec:
                   - key: jenkins
                     operator: In
                     values:
-                      - master
+                      - controller
       # topologySpreadConstraints:
       #   - maxSkew: 1
       #     topologyKey: kubernetes.io/hostname
       #     whenUnsatisfiable: DoNotSchedule
       #     labelSelector:
       #       matchLabels:
-      #         app: jenskins-master
+      #         app: jenskins-controller
       securityContext:
         fsGroup: 1000
         runAsUser: 1000
       serviceAccountName: jenkins-admin
       containers:
-        - name: jenkins-master
+        - name: jenkins-controller
           image: jenkins/jenkins:lts-jdk17
           command: ["/bin/bash", "-c"]
           args:
@@ -55,9 +55,8 @@ spec:
               cpu: "800m"
           imagePullPolicy: Always
           volumeMounts:
-            - name: jcasc-secret-volume
-              mountPath: /run/secrets/secrets.properties
-              subPath: secrets.properties
+            # - name: jenkins-data
+            #   mountPath: /var/jenkins_home
             - name: jcasc-file-volume
               mountPath: /home/jenkins_as_code
             - name: jcasc-plugins-volume
@@ -68,6 +67,21 @@ spec:
               readOnly: false
             - name: jcasc-seedjob-volume
               mountPath: /home/seed
+            - name: jcasc-secrets-volume
+              mountPath: /run/secrets/jenkins.admin.user
+              subPath: jenkins.admin.user
+            - name: jcasc-secrets-volume
+              mountPath: /run/secrets/jenkins.admin.password
+              subPath: jenkins.admin.password
+            - name: jcasc-secrets-volume
+              mountPath: /run/secrets/github.credential.ssh
+              subPath: github.credential.ssh
+            - name: jcasc-secrets-volume
+              mountPath: /run/secrets/github.credential.token
+              subPath: github.credential.token
+            - name: jcasc-secrets-volume
+              mountPath: /run/secrets/sonar.credential.token
+              subPath: sonar.credential.token
           ports:
             - containerPort: 8080
             - containerPort: 50000
@@ -91,6 +105,10 @@ spec:
             periodSeconds: 20
             failureThreshold: 3
       volumes:
+        # - name: jenkins-data
+        #   persistentVolumeClaim:
+        #       claimName: jenkins-pv-claim
+              
         - name: jcasc-secret-volume
           secret:
             secretName: jcasc-secret
@@ -112,3 +130,7 @@ spec:
         - name: jcasc-seedjob-volume
           configMap:
             name: jcasc-seedjob-config
+
+        - name: jcasc-secrets-volume
+          secret:
+            secretName: jenkins-secrets-properties

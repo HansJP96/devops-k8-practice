@@ -83,7 +83,7 @@ jenkins:
               kind: Pod
                metadata:
                 labels:
-                  app: jenkins-slave
+                  app: jenkins-agent
               spec:
                 topologySpreadConstraints:
                 - maxSkew: 1
@@ -91,7 +91,7 @@ jenkins:
                   whenUnsatisfiable: DoNotSchedule
                   labelSelector:
                     matchLabels:
-                      app: jenkins-slave
+                      app: jenkins-agent
                 affinity:
                   nodeAffinity:
                     requiredDuringSchedulingIgnoredDuringExecution:
@@ -100,7 +100,7 @@ jenkins:
                         - key: jenkins
                           operator: In
                           values:
-                          - slave
+                          - agent
   log:
     recorders:
     - loggers:
@@ -127,7 +127,7 @@ security:
       - "method groovy.lang.GroovyObject invokeMethod java.lang.String java.lang.Object"
 unclassified:
   location:
-    url: "http://jenkins-master-service.jenkins.svc.cluster.local:8080"
+    url: "http://devops.practice.jenkins.com"
   gitHubConfiguration:
     apiRateLimitChecker: ThrottleForNormalize
   gitHubPluginConfig:
@@ -135,7 +135,7 @@ unclassified:
       - credentialsId: "Github_Token_Secret"
         manageHooks: true
         name: "Github cuenta hanji96"
-    hookUrl: "http://127.0.0.1:8080/github-webhook/"
+    hookUrl: "http://jenkins-master-service.jenkins.svc.cluster.local:8080/github-webhook/"
   sonarGlobalConfiguration:
     buildWrapperEnabled: false
     installations:
